@@ -12,7 +12,6 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
 
 let rooms = {}; // roomId -> {players, board, currentPlayer, gameOver}
-const rematchRequests = {}; // roomId -> Set of socket IDs
 
 // --- Initial Board ---
 function createInitialBoard() {
@@ -95,27 +94,6 @@ io.on("connection", socket=>{
     // Switch turn
     room.currentPlayer = room.currentPlayer==="red"?"blue":"red";
     io.to(roomId).emit("updateBoard", room.board, room.currentPlayer);
-  });
-
-  // Rematch
-  socket.on("requestRematch", roomId=>{
-    if(!rooms[roomId] || !rooms[roomId].gameOver) return;
-    if(!rematchRequests[roomId]) rematchRequests[roomId] = new Set();
-    rematchRequests[roomId].add(socket.id);
-
-    if(rematchRequests[roomId].size === rooms[roomId].players.length){
-      rooms[roomId].board = createInitialBoard();
-      rooms[roomId].currentPlayer = "red";
-      rooms[roomId].gameOver = false;
-      rematchRequests[roomId] = new Set();
-      io.to(roomId).emit("startGame", rooms[roomId].board, rooms[roomId].currentPlayer);
-    }
-  });
-
-  // Exit to menu
-  socket.on("exitToMenu", roomId=>{
-    if(!rooms[roomId]) return;
-    io.to(roomId).emit("exitToMenu");
   });
 
   // Disconnect
