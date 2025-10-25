@@ -17,6 +17,13 @@ const createdRoomInfo = document.getElementById("createdRoomInfo");
 const currentRoomEl = document.getElementById("currentRoom");
 const youColorEl = document.getElementById("youColor");
 
+// WIN POPUP elements
+const winPopup = document.getElementById("winPopup");
+const winnerText = document.getElementById("winnerText");
+const playAgainBtn = document.getElementById("playAgainBtn");
+const exitBtn = document.getElementById("exitBtn");
+const waitingText = document.getElementById("waitingText");
+
 // --- Menu ---
 document.getElementById("createRoomBtn").onclick = () => {
   const id = "room" + Math.floor(Math.random() * 10000);
@@ -41,6 +48,7 @@ document.getElementById("menuReturnBtn").onclick = () => {
   createdRoomInfo.textContent = "";
   currentRoomEl.textContent = "—";
   youColorEl.textContent = "—";
+  winPopup.classList.add("hidden");
 };
 
 // --- Socket events ---
@@ -64,7 +72,6 @@ socket.on("joinedRoom", (id, color) => {
   createdRoomInfo.textContent = `You are in ${id} as ${color.toUpperCase()}`;
   youColorEl.textContent = color.charAt(0).toUpperCase() + color.slice(1);
   alert(`Joined room ${id} as ${color}`);
-  // update current room UI
   currentRoomEl.textContent = id;
 });
 socket.on("startGame", (b, turn) => {
@@ -79,14 +86,59 @@ socket.on("updateBoard", (b, turn) => {
   currentPlayer = turn;
   drawBoard();
 });
-socket.on("gameOver", winner => {
-  endMessage.textContent = `${winner} Wins!`;
-  endScreen.classList.remove("hidden");
+
+// --- Game Over / Win Popup ---
+function showWinPopup(winner) {
+  winnerText.textContent = `${winner} Wins!`;
+  winPopup.classList.remove("hidden");
+  waitingText.classList.add("hidden");
+  playAgainBtn.disabled = false;
+  exitBtn.disabled = false;
+}
+
+playAgainBtn.addEventListener("click", () => {
+  socket.emit("playerChoice", { roomId, choice: "playAgain" });
+  playAgainBtn.disabled = true;
+  exitBtn.disabled = true;
+  waitingText.classList.remove("hidden");
+  waitingText.textContent = "Waiting for the other player...";
 });
+
+exitBtn.addEventListener("click", () => {
+  socket.emit("playerChoice", { roomId, choice: "exit" });
+  playAgainBtn.disabled = true;
+  exitBtn.disabled = true;
+  waitingText.classList.remove("hidden");
+  waitingText.textContent = "Exiting...";
+});
+
+socket.on("gameOver", winner => showWinPopup(winner));
+
+socket.on("restartGame", (b, turn) => {
+  winPopup.classList.add("hidden");
+  board = b;
+  currentPlayer = turn;
+  drawBoard();
+});
+
+socket.on("endSession", ({ action }) => {
+  if (action === "exit") {
+    winPopup.classList.add("hidden");
+    alert("Other player exited. Returning to main menu...");
+    endScreen.classList.add("hidden");
+    gameScreen.classList.add("hidden");
+    menuScreen.classList.remove("hidden");
+    chatMessages.innerHTML = "";
+    createdRoomInfo.textContent = "";
+    currentRoomEl.textContent = "—";
+    youColorEl.textContent = "—";
+  }
+});
+
 socket.on("playerLeft", () => { alert("Opponent left"); endScreen.classList.remove("hidden") });
 
 // --- Chat ---
-chatSend.onclick = () => { sendMessage() };
+chatSend.onclick = () => sendMessage();
 chatInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage() });
 function sendMessage() {
   if (chatInput.value.trim() === "") return;
@@ -101,22 +153,15 @@ socket.on("receiveMessage", ({ message, playerColor }) => {
 });
 
 // --- Board display / orientation ---
-// Server board coordinates are fixed (0..7 rows top->bottom, 0..7 left->right).
-// We want each player to see their color at the bottom. The original initial board has blue pieces at the top rows
-// and red on bottom rows. So for blue players we rotate the display 180deg (but we must map clicks back).
 function drawBoard() {
   boardEl.innerHTML = "";
-  // displayBoardRows: 0..7 (visual). For each visual cell compute original board coords.
   for (let dr = 0; dr < 8; dr++) {
     for (let dc = 0; dc < 8; dc++) {
-      // Transform visual coords (dr,dc) to logical coords (r,c) that server expects
       let r, c;
       if (playerColor === "blue") {
-        // rotate 180 degrees
         r = 7 - dr;
         c = 7 - dc;
       } else {
-        // red (or unknown) -> show server orientation as-is
         r = dr;
         c = dc;
       }
@@ -124,7 +169,6 @@ function drawBoard() {
       const cell = board[r][c];
       const div = document.createElement("div");
       div.classList.add("cell");
-      // Use dataset to store logical coords for click handling
       div.dataset.r = r;
       div.dataset.c = c;
 
@@ -139,10 +183,8 @@ function drawBoard() {
       boardEl.appendChild(div);
     }
   }
-  // Update turn UI. Display who has the turn in user-friendly format.
   turnEl.textContent = currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1);
   turnEl.style.color = currentPlayer === "red" ? "#e63946" : "#0077b6";
-  // also update small UI
   youColorEl.textContent = playerColor ? (playerColor.charAt(0).toUpperCase() + playerColor.slice(1)) : "—";
 }
 
@@ -150,7 +192,6 @@ function drawBoard() {
 function selectCell(r, c) {
   const piecePlayer = getPlayer(board[r][c]);
   if (board[r][c] === "H" && selected) {
-    // selected contains logical coords already
     socket.emit("makeMove", { roomId, from: selected, to: { r, c } });
     selected = null;
   } else if (piecePlayer === playerColor) {

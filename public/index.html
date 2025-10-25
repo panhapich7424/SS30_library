@@ -46,6 +46,17 @@
   <h1 id="endMessage"></h1>
   <button id="menuReturnBtn">Return to Menu</button>
 </div>
+<!-- WIN POPUP -->
+<div id="winPopup" class="popup hidden">
+  <div class="popup-content">
+    <h2 id="winnerText">You Win!</h2>
+    <div id="popupButtons">
+      <button id="playAgainBtn" class="btn">Play Again</button>
+      <button id="exitBtn" class="btn">Exit</button>
+    </div>
+    <p id="waitingText" class="hidden">Waiting for the other player...</p>
+  </div>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="script.js"></script>
