@@ -1,13 +1,10 @@
-body { font-family:sans-serif; background:#f0f0f0; text-align:center; }
-.hidden{ display:none; }
-
-.board { display:grid; grid-template-columns:repeat(8,60px); grid-gap:2px; margin:20px auto; }
-.cell { width:60px; height:60px; background:#fff; border:1px solid #999; display:flex; align-items:center; justify-content:center; }
-.bluePiece{ width:40px; height:40px; background:#0077b6; border-radius:50%; }
-.redPiece{ width:40px; height:40px; background:#e63946; border-radius:50%; }
-.king{ border:3px solid gold; }
-#chat { margin-top:10px; width:500px; margin-left:auto;margin-right:auto; }
-#chatMessages{height:150px;overflow-y:auto;background:#fff;padding:5px;border:1px solid #999;}
-#chatInput{width:400px; padding:5px;}
-#chatSend{padding:5px 10px;}
-button{padding:5px 10px;margin:5px;}
+body { font-family:sans-serif; text-align:center; background:#f1f1f1; }
+.hidden { display:none; }
+.board { display:grid; grid-template-columns:repeat(8,50px); margin:10px auto; }
+.cell { width:50px; height:50px; border:1px solid #555; display:flex; align-items:center; justify-content:center; background:#ddd; }
+.bluePiece { width:40px; height:40px; background:blue; border-radius:50%; }
+.redPiece { width:40px; height:40px; background:red; border-radius:50%; }
+.king { border:2px solid gold; }
+#chat { width:400px; margin:10px auto; text-align:left; }
+#chatMessages { height:100px; overflow-y:auto; border:1px solid #555; background:#fff; padding:5px; }
+#chatInput { width:300px; }
