@@ -35,12 +35,10 @@ socket.on("roomList", rooms=>{
     roomListEl.appendChild(li);
   });
 });
-
 socket.on("roomFull", ()=>alert("Room full!"));
 socket.on("joinedRoom",(id,color)=>{ roomId=id; playerColor=color; alert(`Joined room ${id} as ${color}`); });
 socket.on("startGame",(b,turn)=>{ 
-  board=b; 
-  currentPlayer=turn; 
+  board=b; currentPlayer=turn; 
   menuScreen.classList.add("hidden"); 
   gameScreen.classList.remove("hidden"); 
   endScreen.classList.add("hidden");
@@ -57,9 +55,7 @@ socket.on("exitToMenu", ()=>{
   gameScreen.classList.add("hidden");
   endScreen.classList.add("hidden");
   menuScreen.classList.remove("hidden");
-  selected=null;
-  roomId=null;
-  playerColor=null;
+  selected=null; roomId=null; playerColor=null;
 });
 
 // Chat
@@ -77,24 +73,18 @@ socket.on("receiveMessage",({message,playerColor})=>{
   chatMessages.scrollTop=chatMessages.scrollHeight;
 });
 
-// Board
+// Board & moves
 function drawBoard(){
   boardEl.innerHTML="";
   for(let r=0;r<8;r++){
     for(let c=0;c<8;c++){
-      const div = document.createElement("div");
+      const div=document.createElement("div");
       div.classList.add("cell");
-
-      // Highlight possible moves
       if(selected){
-        const moves = getValidMoves(selected.r, selected.c);
-        if(moves.some(m => m.r===r && m.c===c)){
-          div.style.background = "#a6e3a1"; // light green
-        }
+        const moves=getValidMoves(selected.r,selected.c);
+        if(moves.some(m=>m.r===r && m.c===c)) div.style.background="#a6e3a1";
       }
-
-      // Draw piece
-      const cell = board[r][c];
+      const cell=board[r][c];
       if(cell!=="H"){
         const p=document.createElement("div");
         if(cell==="O"||cell==="P") p.classList.add("bluePiece");
@@ -102,7 +92,6 @@ function drawBoard(){
         if(cell==="P"||cell==="R") p.classList.add("king");
         div.appendChild(p);
       }
-
       div.onclick=()=>selectCell(r,c);
       boardEl.appendChild(div);
     }
@@ -111,51 +100,48 @@ function drawBoard(){
   turnEl.style.color=currentPlayer==="red"?"#e63946":"#0077b6";
 }
 
-
-// Move
 function selectCell(r,c){
   const piecePlayer = getPlayer(board[r][c]);
   if(board[r][c]==="H" && selected){
-    // Check if the clicked cell is valid
     const moves = getValidMoves(selected.r, selected.c);
-    if(moves.some(m => m.r===r && m.c===c)){
-      socket.emit("makeMove",{roomId, from:selected, to:{r,c}});
+    if(moves.some(m=>m.r===r && m.c===c)){
+      socket.emit("makeMove",{roomId,from:selected,to:{r,c}});
     }
-    selected = null;
+    selected=null;
   } else if(piecePlayer===playerColor){
-    selected = {r,c};
-  } else selected = null;
+    selected={r,c};
+  } else selected=null;
   drawBoard();
 }
 
+function getValidMoves(r,c){
+  const moves=[];
+  if(board[r][c]==="H") return moves;
+  const player=getPlayer(board[r][c]);
+  const dirs=[[0,1],[1,0],[0,-1],[-1,0]];
+  dirs.forEach(([dx,dy])=>{
+    let nr=r+dx,nc=c+dy;
+    while(nr>=0 && nr<8 && nc>=0 && nc<8){
+      if(board[nr][nc]!=="H") break;
+      moves.push({r:nr,c:nc});
+      nr+=dx; nc+=dy;
+    }
+  });
+  return moves;
+}
+
+function getPlayer(piece){
+  if(piece==="O"||piece==="P") return "blue";
+  if(piece==="X"||piece==="R") return "red";
+  return null;
+}
 
 // Play Again & Exit
 playAgainBtn.onclick = ()=>{
   socket.emit("requestRematch", roomId);
   playAgainBtn.disabled = true;
-  endMessage.textContent = "Waiting for other player...";
+  endMessage.textContent="Waiting for other player...";
 };
-
 exitBtn.onclick = ()=>{
   socket.emit("exitToMenu", roomId);
 };
-
-function getValidMoves(r, c){
-  const moves = [];
-  if(board[r][c]==="H") return moves;
-  const piecePlayer = getPlayer(board[r][c]);
-
-  // Orthogonal directions
-  const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
-  dirs.forEach(([dx,dy])=>{
-    let nr = r + dx;
-    let nc = c + dy;
-    while(nr>=0 && nr<8 && nc>=0 && nc<8){
-      if(board[nr][nc]!=="H") break; // blocked
-      moves.push({r:nr, c:nc});
-      nr += dx;
-      nc += dy;
-    }
-  });
-  return moves;
-}
