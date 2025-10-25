@@ -53,17 +53,21 @@ io.on("connection", socket => {
 
   // Join room
   socket.on("joinRoom", roomId => {
-    if (!rooms[roomId]) rooms[roomId] = {players:[], board:createInitialBoard(), currentPlayer:"red", gameOver:false};
+    if (!rooms[roomId]) rooms[roomId] = {players:[], board:createInitialBoard(), currentPlayer:"blue", gameOver:false};
     const room = rooms[roomId];
     if (room.players.length >= 2) { socket.emit("roomFull"); return; }
 
     room.players.push(socket.id);
     socket.join(roomId);
-    const playerColor = room.players.length === 1 ? "red" : "blue";
+    // IMPORTANT: host (first) is BLUE, second is RED
+    const playerColor = room.players.length === 1 ? "blue" : "red";
     socket.emit("joinedRoom", roomId, playerColor);
     broadcastRooms();
 
-    if(room.players.length===2){
+    // When 2 players present, start game
+    if (room.players.length === 2) {
+      // ensure currentPlayer is set to blue to let host start (optional)
+      room.currentPlayer = "blue";
       io.to(roomId).emit("startGame", room.board, room.currentPlayer);
     }
   });
@@ -76,6 +80,7 @@ io.on("connection", socket => {
     if(!piece) return;
     if(getPlayer(piece)!==room.currentPlayer) return;
 
+    // perform move
     room.board[to.r][to.c] = piece;
     room.board[from.r][from.c] = "H";
 
